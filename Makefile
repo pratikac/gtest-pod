@@ -21,19 +21,24 @@ ifeq "$(BUILD_TYPE)" "Debug"
 OPT_FLAGS = -g
 endif
 
-.PRECIOUS: download
-download:
+.PRECIOUS: googletest/CMakeLists.txt
+googletest/CMakeLists.txt:
 	@echo "\nDownloading googletest \n\n"
 	git clone $(GIT_DL_LINK)
 	@echo "\nBUILD_PREFIX: $(BUILD_PREFIX)\n\n"
 
 all: pod-build/Makefile
-	$(MAKE) -C pod-build all install
+	$(MAKE) -C pod-build all
+
+	# hack around, copy headers manually
+	@mkdir -p $(BUILD_PREFIX)/include/gtest
+	@cp -r googletest/include/gtest $(BUILD_PREFIX)/include/
+
 pod-build/Makefile:
 	$(MAKE) configure
 
 .PHONY: configure
-configure: download
+configure: googletest/CMakeLists.txt
 	@echo "\nBUILD_PREFIX: $BUILD_PREFIX\n\n"
 	
 	# create pod-build
@@ -42,7 +47,7 @@ configure: download
 	# run cmake
 	@cd pod-build  && \
 		cmake -DCMAKE_INSTALL_PREFIX=$(BUILD_PREFIX) \
-		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) ..
+		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) ../googletest
 
 # Default to a less-verbose build.  If you want all the gory compiler output,
 # run "make VERBOSE=1"
@@ -51,7 +56,6 @@ $(VERBOSE).SILENT:
 clean:
 	-if [ -e pod-build/install_manifest.txt ]; then rm -f `cat pod-build/install_manifest.txt`; fi
 	-if [ -d pod-build ]; then $(MAKE) -C pod-build clean; rm -rf pod-build; fi
-
 
 # other (custom) targets are passed through to the cmake-generated Makefile
 %::
